@@ -1,0 +1,9 @@
+.carousel-caption {
+  position: absolute;
+  top: 30%;
+  left: -30%;
+}
+
+.carousel {
+  height: 20%;
+}
