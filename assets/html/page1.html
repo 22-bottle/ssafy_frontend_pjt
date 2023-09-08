@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
     <link href="./assets/css/carousel.css" rel="stylesheet" />
+    <script src="../js/search.js"></script>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap");
 
@@ -15,97 +16,87 @@
       }
     </style>
     <script>
-      const serviceKey = "066c4bf5fb8745fcc2b066ec145bb938";
-    </script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script type="text/javascript">
-      let url = "https://grpc-proxy-server-mkvo6j4wsq-du.a.run.app/v1/regcodes";
-      let regcode = "*00000000";
-      // 전국 특별/광역시, 도
-      // https://grpc-proxy-server-mkvo6j4wsq-du.a.run.app/v1/regcodes?regcode_pattern=*00000000
-      $.ajax({
-        url: url,
-        type: "GET",
-        data: {
-          regcode_pattern: regcode,
-        },
-        dataType: "json",
-        success: function (response) {
-          let code = ``;
-          $.each(response.regcodes, function (i, regcode) {
-            code += `
-            <option value="${regcode.code}">${regcode.name}</option>
-            `;
+      function loadMap() {
+        // 주소-좌표 변환 객체를 생성합니다
+        var geocoder = new kakao.maps.services.Geocoder();
+
+        regText =
+          $("#sido option:checked").text() +
+          " " +
+          $("#gugun option:checked").text() +
+          " " +
+          $("#dong option:checked").text();
+
+        // // 주소로 좌표를 검색합니다
+        // geocoder.addressSearch(regText, function (result, status) {
+        //   console.log(regText);
+        //   // 정상적으로 검색이 완료됐으면
+        //   if (status === kakao.maps.services.Status.OK) {
+        //     var coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+
+        //     // 결과값으로 받은 위치를 마커로 표시합니다
+        //     var marker = new kakao.maps.Marker({
+        //       map: map,
+        //       position: coords,
+        //       level: 5,
+        //     });
+
+        //     // 인포윈도우로 장소에 대한 설명을 표시합니다
+        //     // var infowindow = new kakao.maps.InfoWindow({
+        //     //   content: '<div style="width:150px;text-align:center;padding:6px 0;">우리회사</div>',
+        //     // });
+        //     // infowindow.open(map, marker);
+
+        //     // 지도의 중심을 결과값으로 받은 위치로 이동시킵니다
+        //     map.setCenter(coords);
+        //   }
+        // });
+        // 마커를 클릭하면 장소명을 표출할 인포윈도우 입니다
+        var infowindow = new kakao.maps.InfoWindow({ zIndex: 1 });
+
+        // 장소 검색 객체를 생성합니다
+        var ps = new kakao.maps.services.Places();
+
+        var keyword = document.getElementById("info").value;
+        // 키워드로 장소를 검색합니다
+        ps.keywordSearch(regText + " " + keyword, placesSearchCB);
+
+        // 키워드 검색 완료 시 호출되는 콜백함수 입니다
+        function placesSearchCB(data, status, pagination) {
+          if (status === kakao.maps.services.Status.OK) {
+            // 검색된 장소 위치를 기준으로 지도 범위를 재설정하기위해
+            // LatLngBounds 객체에 좌표를 추가합니다
+            var bounds = new kakao.maps.LatLngBounds();
+
+            for (var i = 0; i < data.length; i++) {
+              displayMarker(data[i]);
+              bounds.extend(new kakao.maps.LatLng(data[i].y, data[i].x));
+            }
+
+            // 검색된 장소 위치를 기준으로 지도 범위를 재설정합니다
+            map.setBounds(bounds);
+          }
+        }
+
+        // 지도에 마커를 표시하는 함수입니다
+        function displayMarker(place) {
+          console.log(place);
+          // 마커를 생성하고 지도에 표시합니다
+          var marker = new kakao.maps.Marker({
+            map: map,
+            position: new kakao.maps.LatLng(place.y, place.x),
           });
-          $("#sido").empty().append('<option value="">시도선택</option>').append(code);
-        },
-        error: function (xhr, status, msg) {
-          console.log("상태값 : " + status + " Http에러메시지 : " + msg);
-        },
-      });
 
-      $(document).on("change", "#sido", function () {
-        regcode = $(this).val().substr(0, 2) + "*00000";
-        console.log(regcode);
-        $.ajax({
-          url: url,
-          type: "GET",
-          data: {
-            regcode_pattern: regcode,
-            is_ignore_zero: true,
-          },
-          dataType: "json",
-          success: function (response) {
-            let code = ``;
-            $.each(response.regcodes, function (i, regcode) {
-              code += `
-            <option value="${regcode.code}">${regcode.name.split(" ")[1]}</option>
-            `;
-            });
-            $("#gugun").empty().append('<option value="">구군선택</option>').append(code);
-          },
-          error: function (xhr, status, msg) {
-            console.log("상태값 : " + status + " Http에러메시지 : " + msg);
-          },
-        });
-      });
-
-      $(document).on("change", "#gugun", function () {
-        regcode = $(this).val().substr(0, 4) + "*";
-        console.log(regcode);
-        $.ajax({
-          url: url,
-          type: "GET",
-          data: {
-            regcode_pattern: regcode,
-            is_ignore_zero: true,
-          },
-          dataType: "json",
-          success: function (response) {
-            let code = ``;
-            $.each(response.regcodes, function (i, regcode) {
-              code += `
-            <option value="${regcode.code}">${regcode.name.split(" ")[2]}</option>
-            `;
-            });
-            $("#dong").empty().append('<option value="">동선택</option>').append(code);
-          },
-          error: function (xhr, status, msg) {
-            console.log("상태값 : " + status + " Http에러메시지 : " + msg);
-          },
-        });
-      });
-
-      //   function addOption(selid, data) {
-      //     // console.log(data.regcodes);
-      //     let code = ``;
-      //     $.each(data.regcodes, function (i, regcode) {
-      //       code += `
-      //         <option value="${regcode.code}">${regcode.name}</option>
-      //         `;
-      //     });
-      //     $(selid).empty().append(code);
-      //   }
+          // 마커에 클릭이벤트를 등록합니다
+          kakao.maps.event.addListener(marker, "click", function () {
+            // 마커를 클릭하면 장소명이 인포윈도우에 표출됩니다
+            infowindow.setContent(
+              `<div class="container" style="padding-top: 10px; padding-bottom: 20px"><div>${place.place_name}</div><a href="${place.place_url}" style="" target="_blank">정보</a></div>`
+            );
+            infowindow.open(map, marker);
+          });
+        }
+      }
     </script>
   </head>
   <body>
@@ -176,8 +167,107 @@
           <select name="dong" id="dong" class="dropdown-toggle ms-3 me-3">
             <option value="">동선택</option>
           </select>
+          <input type="text" id="info" placeholder="키워드 입력" style="margin: 0 25px 0 10px; width: 100px" />
+          <button onclick="loadMap()">검색</button>
         </div>
       </div>
+      <script>
+        const serviceKey = "066c4bf5fb8745fcc2b066ec145bb938";
+      </script>
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+      <script type="text/javascript">
+        let url = "https://grpc-proxy-server-mkvo6j4wsq-du.a.run.app/v1/regcodes";
+        let regcode = "*00000000";
+        var regText = "";
+        // 전국 특별/광역시, 도
+        // https://grpc-proxy-server-mkvo6j4wsq-du.a.run.app/v1/regcodes?regcode_pattern=*00000000
+        // 시도가 바뀌면 구군정보 얻기.
+        sendRequest("sido", "*00000000");
+
+        document.querySelector("#sido").addEventListener("change", function () {
+          if (this[this.selectedIndex].value) {
+            let regcode = this[this.selectedIndex].value.substr(0, 2) + "*00000";
+            sendRequest("gugun", regcode);
+          } else {
+            initOption("gugun");
+            initOption("dong");
+          }
+        });
+
+        // 구군이 바뀌면 동정보 얻기.
+        document.querySelector("#gugun").addEventListener("change", function () {
+          if (this[this.selectedIndex].value) {
+            let regcode = this[this.selectedIndex].value.substr(0, 5) + "*";
+            sendRequest("dong", regcode);
+          } else {
+            initOption("dong");
+          }
+        });
+
+        function sendRequest(selid, regcode) {
+          const url = "https://grpc-proxy-server-mkvo6j4wsq-du.a.run.app/v1/regcodes";
+          let params = "regcode_pattern=" + regcode + "&is_ignore_zero=true";
+          fetch(`${url}?${params}`)
+            .then((response) => response.json())
+            .then((data) => addOption(selid, data));
+        }
+
+        function addOption(selid, data) {
+          let opt = ``;
+          initOption(selid);
+          switch (selid) {
+            case "sido":
+              opt += `<option value="">시도선택</option>`;
+              data.regcodes.forEach(function (regcode) {
+                opt += `
+                  <option value="${regcode.code}">${regcode.name}</option>
+                  `;
+              });
+              break;
+            case "gugun":
+              opt += `<option value="">구군선택</option>`;
+              for (let i = 0; i < data.regcodes.length; i++) {
+                if (i != data.regcodes.length - 1) {
+                  if (
+                    data.regcodes[i].name.split(" ")[1] == data.regcodes[i + 1].name.split(" ")[1] &&
+                    data.regcodes[i].name.split(" ").length != data.regcodes[i + 1].name.split(" ").length
+                  ) {
+                    data.regcodes.splice(i, 1);
+                    i--;
+                  }
+                }
+              }
+              let name = "";
+              data.regcodes.forEach(function (regcode) {
+                if (regcode.name.split(" ").length == 2) name = regcode.name.split(" ")[1];
+                else name = regcode.name.split(" ")[1] + " " + regcode.name.split(" ")[2];
+                opt += `
+                  <option value="${regcode.code}">${name}</option>
+                  `;
+              });
+              break;
+            case "dong":
+              opt += `<option value="">동선택</option>`;
+              let idx = 2;
+              data.regcodes.forEach(function (regcode) {
+                if (regcode.name.split(" ").length != 3) idx = 3;
+                opt += `
+                  <option value="${regcode.code}">${regcode.name.split(" ")[idx]}</option>
+                  `;
+              });
+          }
+          document.querySelector(`#${selid}`).innerHTML = opt;
+        }
+
+        function initOption(selid) {
+          let options = document.querySelector(`#${selid}`);
+          options.length = 0;
+          // let len = options.length;
+          // for (let i = len - 1; i >= 0; i--) {
+          //   options.remove(i);
+          // }
+        }
+      </script>
 
       <!--시 군 구 end-->
 
@@ -194,16 +284,43 @@
         crossorigin="anonymous"></script>
       <script
         type="text/javascript"
-        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=b9279a4bc661b8f08442322e95e06d92&libraries=services,clusterer,drawing"></script>
-      <script>
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=066c4bf5fb8745fcc2b066ec145bb938&libraries=services,clusterer,drawing"></script>
+      <script id="loadMap">
         // 카카오지도
         var mapContainer = document.getElementById("map"), // 지도를 표시할 div
           mapOption = {
             center: new kakao.maps.LatLng(37.500613, 127.036431), // 지도의 중심좌표
             level: 5, // 지도의 확대 레벨
           };
-        // 지도를 표시할 div와  지도 옵션으로  지도를 생성합니다
+        // 지도를 표시할 div와 지도 옵션으로  지도를 생성합니다
         var map = new kakao.maps.Map(mapContainer, mapOption);
+
+        // // 주소-좌표 변환 객체를 생성합니다
+        // var geocoder = new kakao.maps.services.Geocoder();
+
+        // // 주소로 좌표를 검색합니다
+        // geocoder.addressSearch(regText, function (result, status) {
+        //   console.log(regText);
+        //   // 정상적으로 검색이 완료됐으면
+        //   if (status === kakao.maps.services.Status.OK) {
+        //     var coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+
+        //     // 결과값으로 받은 위치를 마커로 표시합니다
+        //     var marker = new kakao.maps.Marker({
+        //       map: map,
+        //       position: coords,
+        //     });
+
+        //     // 인포윈도우로 장소에 대한 설명을 표시합니다
+        //     var infowindow = new kakao.maps.InfoWindow({
+        //       content: '<div style="width:150px;text-align:center;padding:6px 0;">우리회사</div>',
+        //     });
+        //     infowindow.open(map, marker);
+
+        //     // 지도의 중심을 결과값으로 받은 위치로 이동시킵니다
+        //     map.setCenter(coords);
+        //   }
+        // });
       </script>
       <!--kakao map end-->
 
