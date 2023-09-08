@@ -1,1 +1,3 @@
-# ssafy_frontend_pjt
+# 대전 5반 7조
+## Enjoy Trip
+
